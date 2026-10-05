@@ -13,7 +13,7 @@ import logging
 import voluptuous as vol
 
 from .api import LumaApi
-from .const import CARD_URL, CONF_TOKEN, CONF_URL, DOMAIN, PLATFORMS
+from .const import CARD_PATH, CARD_URL, CONF_TOKEN, CONF_URL, DOMAIN, PLATFORMS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     if not domain_data.get("card_registered"):
         card_path = Path(__file__).with_name("luma-energy-card.js")
         await hass.http.async_register_static_paths([
-            StaticPathConfig(CARD_URL, str(card_path), cache_headers=True)
+            StaticPathConfig(CARD_PATH, str(card_path), cache_headers=True)
         ])
         add_extra_js_url(hass, CARD_URL)
         domain_data["card_registered"] = True
