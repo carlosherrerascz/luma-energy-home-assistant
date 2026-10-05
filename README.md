@@ -1,7 +1,7 @@
 # LUMA Energy for Home Assistant
 
 This repository contains the Home Assistant custom integration and Lovelace card
-for the self-hosted [LUMA Energy service](https://github.com/carlosherrerascz/luma-energy).
+for a self-hosted LUMA Energy service.
 
 The integration keeps the LUMA API token in Home Assistant's config entry and
 performs authenticated requests on the Home Assistant backend. The Lovelace
@@ -14,7 +14,8 @@ Install with HACS as a custom repository, or copy `custom_components/luma_energy
 into Home Assistant's `config/custom_components` directory. Add **LUMA Energy**
 from Settings → Devices & services and enter the service URL and reader token.
 
-Add the card as a Lovelace resource:
+The integration package installs the backend integration. Copy `luma-energy-card.js`
+to Home Assistant's `/config/www/` directory and add the card as a Lovelace resource:
 
 ```yaml
 url: /local/luma-energy-card.js
@@ -35,4 +36,3 @@ window.dispatchEvent(new CustomEvent("luma-energy-period-changed", {
 
 Commits use Conventional Commits. Merges to `main` run semantic-release, which
 creates the `vX.Y.Z` tag, changelog, GitHub release, and a HACS-compatible zip.
-

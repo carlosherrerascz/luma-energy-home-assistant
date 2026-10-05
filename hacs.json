@@ -1,6 +1,5 @@
 {
   "name": "LUMA Energy",
   "content_in_root": false,
-  "render_readme": true,
-  "filename": "luma-energy-card.js"
+  "render_readme": true
 }

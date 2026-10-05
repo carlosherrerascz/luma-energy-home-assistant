@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
       - name: Validate JSON and Python syntax
         run: |
           python - <<'PY'
@@ -22,3 +24,5 @@ jobs:
           for path in Path('custom_components').rglob('*.py'):
               compile(path.read_text(), str(path), 'exec')
           PY
+      - name: Validate card syntax
+        run: node --check luma-energy-card.js

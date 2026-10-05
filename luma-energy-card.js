@@ -1,6 +1,7 @@
 class LumaEnergyCard extends HTMLElement {
   setConfig(config) {
     this.config = config;
+    this._revision = 0;
     this.attachShadow({ mode: "open" });
     this.shadowRoot.innerHTML = `<style>:host{display:block}.card{padding:16px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.label{color:var(--secondary-text-color);font-size:.85em}.value{font-size:1.2em}details{margin-top:12px} .error{color:var(--error-color)}</style><ha-card><div class="card"><h2>LUMA Energy</h2><div id="body">Loading…</div></div></ha-card>`;
     this._onPeriod = (event) => this._load(event.detail || {});
@@ -17,12 +18,12 @@ class LumaEnergyCard extends HTMLElement {
       const start = selection.period_start || selection.start || this.config.period_start;
       const end = selection.period_end || selection.end || this.config.period_end;
       const basis = selection.basis || this.config.basis || "bill_issue";
-      if (!start || !end || !this._hass) { this._render(`<p>Choose a period in the Energy dashboard.</p>`); return; }
       const revision = ++this._revision;
+      if (!start || !end || !this._hass) { this._renderMessage("Choose a period in the Energy dashboard."); return; }
       try {
         const result = await this._hass.callWS({type:"luma_energy/period_summary", start, end, basis});
         if (revision === this._revision) this._renderResult(result);
-      } catch (error) { if (revision === this._revision) this._render(`<p class="error">Unable to load LUMA data: ${error.message}</p>`); }
+      } catch (error) { if (revision === this._revision) this._renderMessage(`Unable to load LUMA data: ${error.message}`, true); }
     }, 150);
   }
 
@@ -30,12 +31,53 @@ class LumaEnergyCard extends HTMLElement {
     const money = (cents) => cents == null ? "—" : new Intl.NumberFormat(undefined, {style:"currency", currency:"USD"}).format(cents / 100);
     const t = data.totals || {};
     const e = data.energy?.totals_kwh || {};
-    const first = data.bills?.[0] || {};
-    const lumaImport = first.differences?.import?.luma_kwh;
-    const lines = [["Actual charges",money(t.actual_cents)],["Without solar",money(t.without_solar_cents)],["Solar savings",money(t.utility_bill_reduction_cents)],["Loan payment",money(t.loan_cents)],["Savings after loan",money(t.solar_savings_cents)],["LUMA imports",`${lumaImport ?? "—"} kWh`],["EG4 imports",`${e.import ?? "—"} kWh`]];
-    this._render(`<p>${data.start} → ${data.end} · ${data.basis === "calendar" ? "calendar energy" : "bills issued"}</p><div class="grid">${lines.map(([l,v])=>`<div><div class="label">${l}</div><div class="value">${v}</div></div>`).join("")}</div><p>${data.billing_note || ""}</p><details><summary>Calculation details</summary><pre>${JSON.stringify({coverage:data.coverage,bills:data.bills,revision:data.revision},null,2)}</pre></details>`);
+    const comparisons = Array.isArray(data.bills) ? data.bills : [];
+    const sumDifference = (field, source) => {
+      const values = comparisons.map((bill) => bill.differences?.[field]?.[source]).filter((value) => value != null);
+      return values.length === comparisons.length && values.length ? values.reduce((sum, value) => sum + Number(value), 0) : null;
+    };
+    const lumaImport = data.basis === "calendar" ? null : sumDifference("import", "luma_kwh");
+    const eg4Import = data.basis === "calendar" ? e.import : sumDifference("import", "eg4_kwh");
+    const lines = [["Actual charges",money(t.actual_cents)],["Without solar",money(t.without_solar_cents)],["Solar savings",money(t.utility_bill_reduction_cents)],["Loan payment",money(t.loan_cents)],["Savings after loan",money(t.solar_savings_cents)],["LUMA imports",`${lumaImport ?? "—"} kWh`],["EG4 imports",`${eg4Import ?? "—"} kWh`]];
+    const body = this.shadowRoot?.getElementById("body");
+    if (!body) return;
+    body.replaceChildren();
+    const period = document.createElement("p");
+    period.textContent = `${data.start} → ${data.end} · ${data.basis === "calendar" ? "calendar energy" : "bills issued"}`;
+    body.append(period);
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    for (const [label, value] of lines) {
+      const metric = document.createElement("div");
+      const labelElement = document.createElement("div");
+      labelElement.className = "label";
+      labelElement.textContent = label;
+      const valueElement = document.createElement("div");
+      valueElement.className = "value";
+      valueElement.textContent = value;
+      metric.append(labelElement, valueElement);
+      grid.append(metric);
+    }
+    body.append(grid);
+    const note = document.createElement("p");
+    note.textContent = data.billing_note || "";
+    body.append(note);
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = "Calculation details";
+    const pre = document.createElement("pre");
+    pre.textContent = JSON.stringify({coverage:data.coverage,bills:data.bills,revision:data.revision}, null, 2);
+    details.append(summary, pre);
+    body.append(details);
   }
-  _render(html) { const body = this.shadowRoot?.getElementById("body"); if (body) body.innerHTML = html; }
+  _renderMessage(message, error = false) {
+    const body = this.shadowRoot?.getElementById("body");
+    if (!body) return;
+    const paragraph = document.createElement("p");
+    if (error) paragraph.className = "error";
+    paragraph.textContent = message;
+    body.replaceChildren(paragraph);
+  }
   getCardSize() { return 5; }
 }
 customElements.define("luma-energy-card", LumaEnergyCard);
