@@ -17,6 +17,7 @@ jobs:
         with: {fetch-depth: 0}
       - uses: actions/setup-node@v4
         with: {node-version: 22}
+      - run: node --check custom_components/luma_energy/luma-energy-card.js
       - run: npm install --ignore-scripts
       - run: npm run release
         env:

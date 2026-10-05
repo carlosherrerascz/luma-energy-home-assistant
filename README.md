@@ -24,7 +24,9 @@ The integration automatically registers its summary card when it loads. Add
 is required. With no date options, the card shows the latest available bill.
 It accepts
 `period_start`, `period_end`, and `basis` overrides. When the host dashboard
-publishes `luma-energy-period-changed`, it follows that selection automatically:
+contains the standard Energy period selector, it follows that selection
+automatically. Set `collection_key` when using a custom Energy data collection.
+The older custom event is also supported:
 
 ```js
 window.dispatchEvent(new CustomEvent("luma-energy-period-changed", {

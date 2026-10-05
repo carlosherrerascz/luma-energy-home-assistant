@@ -2,15 +2,56 @@ class LumaEnergyCard extends HTMLElement {
   setConfig(config) {
     this.config = config;
     this._revision = 0;
+    this._collectionUnsubscribe = null;
+    this._collectionRetry = null;
     this.attachShadow({ mode: "open" });
-    this.shadowRoot.innerHTML = `<style>:host{display:block}.card{padding:16px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.label{color:var(--secondary-text-color);font-size:.85em}.value{font-size:1.2em}details{margin-top:12px} .error{color:var(--error-color)}</style><ha-card><div class="card"><h2>LUMA Energy</h2><div id="body">Loading…</div></div></ha-card>`;
+    this.shadowRoot.innerHTML = `<style>:host{display:block}.card{padding:16px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.label{color:var(--secondary-text-color);font-size:.85em}.value{font-size:1.2em}table{border-collapse:collapse;margin-top:16px;width:100%}th,td{border-bottom:1px solid var(--divider-color);padding:6px 4px;text-align:left}th{color:var(--secondary-text-color);font-size:.85em}details{margin-top:12px}.error{color:var(--error-color)}</style><ha-card><div class="card"><h2>LUMA Energy</h2><div id="body">Loading…</div></div></ha-card>`;
     this._onPeriod = (event) => this._load(event.detail || {});
     window.addEventListener(config.selector_event || "luma-energy-period-changed", this._onPeriod);
   }
 
-  set hass(hass) { this._hass = hass; if (!this._loaded) { this._loaded = true; this._load(this.config || {}); } }
+  set hass(hass) {
+    this._hass = hass;
+    if (!this._loaded) {
+      this._loaded = true;
+      this._load(this.config || {});
+      if (!this.config.period_start && !this.config.period_end) this._subscribeToEnergyCollection();
+    }
+  }
 
-  disconnectedCallback() { if (this._onPeriod) window.removeEventListener(this.config.selector_event || "luma-energy-period-changed", this._onPeriod); if (this._timer) clearTimeout(this._timer); }
+  disconnectedCallback() {
+    if (this._onPeriod) window.removeEventListener(this.config.selector_event || "luma-energy-period-changed", this._onPeriod);
+    if (this._timer) clearTimeout(this._timer);
+    if (this._collectionRetry) clearTimeout(this._collectionRetry);
+    if (this._collectionUnsubscribe) this._collectionUnsubscribe();
+    this._collectionUnsubscribe = null;
+  }
+
+  _subscribeToEnergyCollection() {
+    if (this._collectionUnsubscribe || !this._hass?.connection) return;
+    const collectionKey = `_${this.config.collection_key || "energy_dashboard"}`;
+    const collection = this._hass.connection[collectionKey];
+    if (!collection || typeof collection.subscribe !== "function") {
+      this._collectionRetry = setTimeout(() => this._subscribeToEnergyCollection(), 500);
+      return;
+    }
+    this._collectionUnsubscribe = collection.subscribe((data) => {
+      if (!data?.start || !data?.end) return;
+      const end = new Date(data.end);
+      end.setDate(end.getDate() + 1);
+      this._load({
+        start: this._formatDate(data.start),
+        end: this._formatDate(end),
+        basis: this.config.basis || "bill_issue",
+      });
+    });
+  }
+
+  _formatDate(value) {
+    const date = new Date(value);
+    const pad = (part) => String(part).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
 
   _load(selection) {
     clearTimeout(this._timer);
@@ -62,6 +103,33 @@ class LumaEnergyCard extends HTMLElement {
       grid.append(metric);
     }
     body.append(grid);
+    if (comparisons.length) {
+      const heading = document.createElement("h3");
+      heading.textContent = "Bill history";
+      body.append(heading);
+      const table = document.createElement("table");
+      const header = document.createElement("tr");
+      for (const label of ["Issued", "Actual", "After loan", "Confidence"]) {
+        const cell = document.createElement("th");
+        cell.textContent = label;
+        header.append(cell);
+      }
+      const thead = document.createElement("thead");
+      thead.append(header);
+      table.append(thead);
+      const rows = document.createElement("tbody");
+      for (const bill of comparisons) {
+        const row = document.createElement("tr");
+        for (const value of [bill.issue_date || "—", money(bill.actual_cents), money(bill.solar_savings_cents), bill.confidence || "—"]) {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.append(cell);
+        }
+        rows.append(row);
+      }
+      table.append(rows);
+      body.append(table);
+    }
     const note = document.createElement("p");
     note.textContent = data.billing_note || "";
     body.append(note);
