@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.3...v1.2.4) (2026-10-05)
+
+
+### Bug Fixes
+
+* handle selected billing periods reliably ([95ce2d0](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/95ce2d00b271925ae1cffa2bc03371aa090348d5))
+
 ## [1.2.3](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.2...v1.2.3) (2026-10-05)
 
 
