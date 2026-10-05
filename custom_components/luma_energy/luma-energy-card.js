@@ -35,7 +35,14 @@ class LumaEnergyCard extends HTMLElement {
   _subscribeToEnergyCollection() {
     if (this._collectionUnsubscribes.length || !this._hass?.connection) return;
     const configuredKey = this.config.collection_key || "energy_dashboard";
-    const collection = this._hass.connection[`_${configuredKey}`];
+    const candidateKeys = this._hass.panelUrl && configuredKey === "energy_dashboard" ? [`energy_${this._hass.panelUrl}`, configuredKey] : [configuredKey];
+    if (this._hass.panelUrl && !candidateKeys.includes(`energy_${this._hass.panelUrl}`)) candidateKeys.push(`energy_${this._hass.panelUrl}`);
+    candidateKeys.push("energy");
+    const collectionKey = candidateKeys.find((key, index) => {
+      const collection = this._hass.connection[`_${key}`];
+      return candidateKeys.indexOf(key) === index && typeof collection?.subscribe === "function";
+    });
+    const collection = collectionKey ? this._hass.connection[`_${collectionKey}`] : null;
     let subscribed = false;
     if (collection && typeof collection.subscribe === "function") {
       subscribed = true;
