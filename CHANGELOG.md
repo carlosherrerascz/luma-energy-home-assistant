@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.0.0...v1.0.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* prepare integration for public HACS release ([1f8aa32](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/1f8aa32674e5e9078a786486f34d5a320be006c3))
+
 # 1.0.0 (2026-10-05)
 
 

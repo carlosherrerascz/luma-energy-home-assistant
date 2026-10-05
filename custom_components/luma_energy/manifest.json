@@ -1,7 +1,7 @@
 {
   "domain": "luma_energy",
   "name": "LUMA Energy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "documentation": "https://github.com/carlosherrerascz/luma-energy-home-assistant",
   "issue_tracker": "https://github.com/carlosherrerascz/luma-energy-home-assistant/issues",
   "codeowners": [
