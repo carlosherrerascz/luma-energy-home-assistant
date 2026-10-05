@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.0...v1.2.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* bust lovelace card cache on releases ([d30388e](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/d30388e020204d0325dd20e55ff584fc0b3e9d88))
+
 # [1.2.0](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.1.0...v1.2.0) (2026-10-05)
 
 
