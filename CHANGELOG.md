@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.1.0...v1.2.0) (2026-10-05)
+
+
+### Features
+
+* follow energy dashboard period selection ([3423e43](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/3423e438db6c54afc45f0a8ea002dcf278c9067f))
+
 # [1.1.0](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.0.1...v1.1.0) (2026-10-05)
 
 
