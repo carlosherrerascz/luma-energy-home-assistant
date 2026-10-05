@@ -21,11 +21,15 @@ from Settings → Devices & services and enter the service URL and reader token.
 
 The integration automatically registers its summary card when it loads. Add
 `type: custom:luma-energy-card` to a dashboard; no separate JavaScript resource
-is required. With no date options, the card shows the latest available bill.
-It accepts
+is required. With no explicit date options, the card follows the standard
+Energy Dashboard period selector and waits for that selection before loading
+data. It accepts
 `period_start`, `period_end`, and `basis` overrides. When the host dashboard
 contains the standard Energy period selector, it follows that selection
 automatically. Set `collection_key` when using a custom Energy data collection.
+For `basis: bill_issue`, the selected period controls which bills appear in the
+comparison table and the card labels the result accordingly. Energy totals and
+coverage always describe the selected dates.
 The older custom event is also supported:
 
 ```js
