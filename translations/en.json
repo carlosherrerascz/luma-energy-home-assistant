@@ -1,0 +1,12 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to LUMA Energy",
+        "description": "Enter the LUMA Energy service URL and its read-only API token.",
+        "data": {"url": "Service URL", "token": "Reader token"}
+      }
+    },
+    "error": {"cannot_connect": "Unable to connect or authenticate"}
+  }
+}

@@ -1,0 +1,10 @@
+const fs = require("fs");
+const version = process.argv[2];
+if (!version || !/^\d+\.\d+\.\d+$/.test(version)) throw new Error("A semantic version is required");
+const path = "custom_components/luma_energy/manifest.json";
+const manifest = JSON.parse(fs.readFileSync(path));
+manifest.version = version;
+fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n");
+fs.mkdirSync("dist", {recursive: true});
+const {execFileSync} = require("child_process");
+execFileSync("zip", ["-qr", "dist/luma-energy-home-assistant.zip", "custom_components", "luma-energy-card.js", "hacs.json"]);

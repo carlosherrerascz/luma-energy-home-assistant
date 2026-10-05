@@ -1,0 +1,11 @@
+{
+  "domain": "luma_energy",
+  "name": "LUMA Energy",
+  "version": "0.1.0",
+  "documentation": "https://github.com/carlosherrerascz/luma-energy-home-assistant",
+  "issue_tracker": "https://github.com/carlosherrerascz/luma-energy-home-assistant/issues",
+  "codeowners": ["@carlosherrerascz"],
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "requirements": []
+}
