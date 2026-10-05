@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.1...v1.2.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* render selected energy periods ([5d47796](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/5d477961d2b32e208f5a0446293fe99148563406))
+
 ## [1.2.1](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.0...v1.2.1) (2026-10-05)
 
 
