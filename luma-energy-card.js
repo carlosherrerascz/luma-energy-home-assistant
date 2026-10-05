@@ -30,11 +30,12 @@ class LumaEnergyCard extends HTMLElement {
     const money = (cents) => cents == null ? "—" : new Intl.NumberFormat(undefined, {style:"currency", currency:"USD"}).format(cents / 100);
     const t = data.totals || {};
     const e = data.energy?.totals_kwh || {};
-    const lines = [["Actual charges",money(t.actual_cents)],["Without solar",money(t.without_solar_cents)],["Solar savings",money(t.utility_bill_reduction_cents)],["Loan payment",money(t.loan_cents)],["Savings after loan",money(t.solar_savings_cents)],["LUMA imports",`${e.import ?? "—"} kWh`],["EG4 imports",`${e.import ?? "—"} kWh`]];
+    const first = data.bills?.[0] || {};
+    const lumaImport = first.differences?.import?.luma_kwh;
+    const lines = [["Actual charges",money(t.actual_cents)],["Without solar",money(t.without_solar_cents)],["Solar savings",money(t.utility_bill_reduction_cents)],["Loan payment",money(t.loan_cents)],["Savings after loan",money(t.solar_savings_cents)],["LUMA imports",`${lumaImport ?? "—"} kWh`],["EG4 imports",`${e.import ?? "—"} kWh`]];
     this._render(`<p>${data.start} → ${data.end} · ${data.basis === "calendar" ? "calendar energy" : "bills issued"}</p><div class="grid">${lines.map(([l,v])=>`<div><div class="label">${l}</div><div class="value">${v}</div></div>`).join("")}</div><p>${data.billing_note || ""}</p><details><summary>Calculation details</summary><pre>${JSON.stringify({coverage:data.coverage,bills:data.bills,revision:data.revision},null,2)}</pre></details>`);
   }
   _render(html) { const body = this.shadowRoot?.getElementById("body"); if (body) body.innerHTML = html; }
   getCardSize() { return 5; }
 }
 customElements.define("luma-energy-card", LumaEnergyCard);
-
