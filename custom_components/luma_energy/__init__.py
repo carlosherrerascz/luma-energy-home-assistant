@@ -1,20 +1,39 @@
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.components import websocket_api
+from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from datetime import timedelta
+from pathlib import Path
+import logging
 import voluptuous as vol
 
 from .api import LumaApi
-from .const import CONF_TOKEN, CONF_URL, DOMAIN, PLATFORMS
+from .const import CARD_URL, CONF_TOKEN, CONF_URL, DOMAIN, PLATFORMS
+
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    if not domain_data.get("card_registered"):
+        card_path = Path(__file__).with_name("luma-energy-card.js")
+        await hass.http.async_register_static_paths([
+            StaticPathConfig(CARD_URL, str(card_path), cache_headers=True)
+        ])
+        add_extra_js_url(hass, CARD_URL)
+        domain_data["card_registered"] = True
+    return True
 
 
 @websocket_api.websocket_command({
     "type": "luma_energy/period_summary",
-    "start": str,
-    "end": str,
+    vol.Optional("start"): str,
+    vol.Optional("end"): str,
     vol.Optional("basis", default="bill_issue"): vol.In(["bill_issue", "calendar"]),
 })
 @websocket_api.async_response
@@ -25,7 +44,13 @@ async def websocket_period_summary(hass, connection, msg):
         return
     api = hass.data[DOMAIN][entries[0].entry_id]["api"]
     try:
-        result = await api.period_summary(msg["start"], msg["end"], msg.get("basis", "bill_issue"))
+        if msg.get("start") and msg.get("end"):
+            result = await api.period_summary(msg["start"], msg["end"], msg.get("basis", "bill_issue"))
+        elif not msg.get("start") and not msg.get("end"):
+            result = await api.latest_summary()
+        else:
+            connection.send_error(msg["id"], "invalid_period", "start and end must be provided together")
+            return
     except Exception as err:
         connection.send_error(msg["id"], "api_error", str(err))
         return
@@ -36,10 +61,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api = LumaApi(aiohttp_client.async_get_clientsession(hass), entry.data[CONF_URL], entry.data[CONF_TOKEN])
     coordinator = DataUpdateCoordinator(
         hass,
-        logger=__import__("logging").getLogger(__name__),
+        logger=_LOGGER,
         name="LUMA Energy",
-        update_method=api.status,
-        update_interval=__import__("datetime").timedelta(minutes=5),
+        update_method=lambda: _coordinator_data(api),
+        update_interval=timedelta(minutes=5),
     )
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {"api": api, "coordinator": coordinator}
@@ -56,3 +81,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unloaded:
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return unloaded
+
+
+async def _coordinator_data(api: LumaApi):
+    return {"status": await api.status(), "summary": await api.latest_summary()}

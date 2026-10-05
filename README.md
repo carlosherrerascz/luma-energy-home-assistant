@@ -19,15 +19,10 @@ Install with HACS as a custom repository, or copy `custom_components/luma_energy
 into Home Assistant's `config/custom_components` directory. Add **LUMA Energy**
 from Settings → Devices & services and enter the service URL and reader token.
 
-The integration package installs the backend integration. Copy `luma-energy-card.js`
-to Home Assistant's `/config/www/` directory and add the card as a Lovelace resource:
-
-```yaml
-url: /local/luma-energy-card.js
-type: module
-```
-
-Then add `type: custom:luma-energy-card` to a dashboard. The card accepts
+The integration automatically registers its summary card when it loads. Add
+`type: custom:luma-energy-card` to a dashboard; no separate JavaScript resource
+is required. With no date options, the card shows the latest available bill.
+It accepts
 `period_start`, `period_end`, and `basis` overrides. When the host dashboard
 publishes `luma-energy-period-changed`, it follows that selection automatically:
 
