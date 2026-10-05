@@ -3,6 +3,11 @@ from __future__ import annotations
 from homeassistant.components import websocket_api
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.lovelace.const import (
+    CONF_RESOURCE_TYPE_WS,
+    LOVELACE_DATA,
+    MODE_STORAGE,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client
@@ -25,9 +30,35 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         await hass.http.async_register_static_paths([
             StaticPathConfig(CARD_PATH, str(card_path), cache_headers=True)
         ])
-        add_extra_js_url(hass, CARD_URL)
+        await _async_register_card(hass)
         domain_data["card_registered"] = True
     return True
+
+
+async def _async_register_card(hass: HomeAssistant) -> None:
+    """Register the card as a Lovelace resource without user configuration."""
+    lovelace = hass.data.get(LOVELACE_DATA)
+    if lovelace is None or lovelace.resource_mode != MODE_STORAGE:
+        # YAML resource mode cannot be changed at runtime. Loading the module
+        # through the frontend keeps the card configuration-free in that mode.
+        add_extra_js_url(hass, CARD_URL)
+        return
+
+    resources = lovelace.resources
+    await resources.async_get_info()
+    existing = next(
+        (
+            item
+            for item in resources.async_items()
+            if item.get("url", "").split("?", 1)[0] == CARD_PATH
+        ),
+        None,
+    )
+    resource = {CONF_RESOURCE_TYPE_WS: "module", "url": CARD_URL}
+    if existing is None:
+        await resources.async_create_item(resource)
+    elif existing.get("url") != CARD_URL or existing.get("type") != "module":
+        await resources.async_update_item(existing["id"], resource)
 
 
 @websocket_api.websocket_command({

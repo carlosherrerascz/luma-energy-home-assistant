@@ -56,7 +56,8 @@ class LumaEnergyCard extends HTMLElement {
   _handleSelection(data) {
     if (!data?.start || !data?.end) return;
     const start = this._formatDate(data.start);
-    const end = this._formatDate(data.end);
+    // The Energy selector's end date is inclusive; the LUMA API uses [start, end).
+    const end = this._shiftDate(this._formatDate(data.end), 1);
     const selection = `${start}|${end}`;
     if (selection === this._lastSelection) return;
     this._lastSelection = selection;
@@ -68,6 +69,13 @@ class LumaEnergyCard extends HTMLElement {
     const date = new Date(value);
     const pad = (part) => String(part).padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  _shiftDate(value, days) {
+    const [year, month, day] = value.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    const pad = (part) => String(part).padStart(2, "0");
+    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
   }
 
   _load(selection) {
@@ -91,12 +99,14 @@ class LumaEnergyCard extends HTMLElement {
   _renderResult(data) {
     const money = (cents) => cents == null ? "—" : new Intl.NumberFormat(undefined, {style:"currency", currency:"USD"}).format(cents / 100);
     const t = data.totals || {};
-    const e = data.energy?.totals_kwh || {};
+    const energy = data.energy || {};
     const comparisons = Array.isArray(data.bills) ? data.bills : [];
     const kwh = (value) => value == null ? "—" : `${Number(value).toLocaleString(undefined, {maximumFractionDigits: 2})} kWh`;
-    const periodLabel = data.start ? `${data.start} → ${data.end}` : "Selected period unavailable";
-    const basisLabel = data.basis === "calendar" ? "calendar energy" : "bills issued in selected period";
-    const lines = [["Actual charges",money(t.actual_cents)],["Without solar",money(t.without_solar_cents)],["Solar savings",money(t.utility_bill_reduction_cents)],["Loan payment",money(t.loan_cents)],["Savings after loan",money(t.solar_savings_cents)],["LUMA imports",kwh(comparisons.length ? comparisons.reduce((sum, bill) => sum + Number(bill.differences?.import?.luma_kwh || 0), 0) : null)],["EG4 imports",kwh(e.present_days ? e.import : null)],["Energy coverage",e.days == null ? "—" : `${e.present_days || 0}/${e.days} days`]];
+    const inclusiveEnd = data.end ? this._shiftDate(data.end, -1) : null;
+    const periodLabel = data.start && inclusiveEnd ? `${data.start} → ${inclusiveEnd}` : "Selected period unavailable";
+    const basisLabel = data.basis === "calendar" ? "calendar energy" : "bills covering selected period";
+    const sumImports = (source) => comparisons.length ? comparisons.reduce((sum, bill) => sum + Number(bill.differences?.import?.[source] || 0), 0) : null;
+    const lines = [["Actual charges",money(t.actual_cents)],["Without solar",money(t.without_solar_cents)],["Solar savings",money(t.utility_bill_reduction_cents)],["Loan payment",money(t.loan_cents)],["Savings after loan",money(t.solar_savings_cents)],["LUMA imports",kwh(sumImports("luma_kwh"))],["EG4 imports",kwh(sumImports("eg4_kwh"))],["Energy coverage",energy.days == null ? "—" : `${energy.present_days || 0}/${energy.days} days`]];
     const body = this.shadowRoot?.getElementById("body");
     if (!body) return;
     body.replaceChildren();
@@ -146,7 +156,7 @@ class LumaEnergyCard extends HTMLElement {
     }
     const note = document.createElement("p");
     const missingDays = Object.values(data.energy?.missing_days || {}).reduce((max, value) => Math.max(max, Number(value) || 0), 0);
-    note.textContent = data.billing_note || (comparisons.length ? "" : "No LUMA bills were issued in this selection; energy totals are shown for the selected period.");
+    note.textContent = data.billing_note || (comparisons.length ? "" : "No LUMA bills cover this selection; energy totals are shown for the selected period.");
     if (missingDays) note.textContent += `${note.textContent ? " " : ""}Energy coverage is incomplete: ${missingDays} day${missingDays === 1 ? "" : "s"} are missing.`;
     body.append(note);
     const details = document.createElement("details");
