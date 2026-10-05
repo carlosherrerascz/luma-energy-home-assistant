@@ -1,5 +1,10 @@
 # LUMA Energy for Home Assistant
 
+> **Personal project warning:** This integration is built for my own Home Assistant
+> setup and is experimental. It may not work for anyone else, may remain broken
+> for the foreseeable future, and may never become a generally usable project.
+> Use it only if you are comfortable troubleshooting and adapting it yourself.
+
 This repository contains the Home Assistant custom integration and Lovelace card
 for a self-hosted LUMA Energy service.
 
