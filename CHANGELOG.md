@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.0.1...v1.1.0) (2026-10-05)
+
+
+### Features
+
+* provide automatic summary entities and card ([44f222d](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/44f222d075b8d649bba1e7ca596ce3900fed7b4b))
+
 ## [1.0.1](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.0.0...v1.0.1) (2026-10-05)
 
 
