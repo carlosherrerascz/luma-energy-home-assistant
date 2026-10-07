@@ -5,10 +5,10 @@ class LumaEnergyCard extends HTMLElement {
     this._collectionUnsubscribes = [];
     this._collectionRetry = null;
     this._lastSelection = null;
+    this._connected = false;
     this.attachShadow({ mode: "open" });
     this.shadowRoot.innerHTML = `<style>:host{display:block}.card{padding:16px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.label{color:var(--secondary-text-color);font-size:.85em}.value{font-size:1.2em}table{border-collapse:collapse;margin-top:16px;width:100%}th,td{border-bottom:1px solid var(--divider-color);padding:6px 4px;text-align:left}th{color:var(--secondary-text-color);font-size:.85em}details{margin-top:12px}.error{color:var(--error-color)}</style><ha-card><div class="card"><h2>LUMA Energy</h2><div id="body">Loading…</div></div></ha-card>`;
     this._onPeriod = (event) => this._load(event.detail || {});
-    window.addEventListener(config.selector_event || "luma-energy-period-changed", this._onPeriod);
   }
 
   set hass(hass) {
@@ -22,18 +22,30 @@ class LumaEnergyCard extends HTMLElement {
         this._subscribeToEnergyCollection();
       }
     }
+    if (!this.config.period_start || !this.config.period_end) this._subscribeToEnergyCollection();
+  }
+
+  connectedCallback() {
+    this._connected = true;
+    window.removeEventListener(this.config.selector_event || "luma-energy-period-changed", this._onPeriod);
+    window.addEventListener(this.config.selector_event || "luma-energy-period-changed", this._onPeriod);
+    if (this._hass && (!this.config.period_start || !this.config.period_end)) this._subscribeToEnergyCollection();
   }
 
   disconnectedCallback() {
+    this._connected = false;
     if (this._onPeriod) window.removeEventListener(this.config.selector_event || "luma-energy-period-changed", this._onPeriod);
     if (this._timer) clearTimeout(this._timer);
-    if (this._collectionRetry) clearTimeout(this._collectionRetry);
+    if (this._collectionRetry) {
+      clearTimeout(this._collectionRetry);
+      this._collectionRetry = null;
+    }
     for (const unsubscribe of this._collectionUnsubscribes) unsubscribe();
     this._collectionUnsubscribes = [];
   }
 
   _subscribeToEnergyCollection() {
-    if (this._collectionUnsubscribes.length || !this._hass?.connection) return;
+    if (!this._connected || this._collectionUnsubscribes.length || !this._hass?.connection) return;
     const configuredKey = this.config.collection_key || "energy_dashboard";
     const candidateKeys = this._hass.panelUrl && configuredKey === "energy_dashboard" ? [`energy_${this._hass.panelUrl}`, configuredKey] : [configuredKey];
     if (this._hass.panelUrl && !candidateKeys.includes(`energy_${this._hass.panelUrl}`)) candidateKeys.push(`energy_${this._hass.panelUrl}`);
@@ -47,8 +59,16 @@ class LumaEnergyCard extends HTMLElement {
     if (collection && typeof collection.subscribe === "function") {
       subscribed = true;
       this._collectionUnsubscribes.push(collection.subscribe((data) => this._handleSelection(data)));
+      this._collectionRetry = null;
+      const current = collection.state?.start && collection.state?.end
+        ? collection.state
+        : collection.start && collection.end
+          ? { start: collection.start, end: collection.end }
+          : null;
+      if (current) this._handleSelection(current);
     }
     if (!subscribed) {
+      if (this._collectionRetry) clearTimeout(this._collectionRetry);
       this._collectionRetry = setTimeout(() => this._subscribeToEnergyCollection(), 500);
     }
   }
