@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.3.0...v1.4.0) (2026-10-07)
+
+
+### Features
+
+* add year-to-date savings summary ([43fcb2d](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/43fcb2d2150310662d80f9547f22f9ece0935dee))
+
 # [1.3.0](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.5...v1.3.0) (2026-10-07)
 
 
