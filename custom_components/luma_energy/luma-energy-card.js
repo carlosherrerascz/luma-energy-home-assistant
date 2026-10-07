@@ -65,6 +65,18 @@ class LumaEnergyCard extends HTMLElement {
         .imports { color:var(--secondary-text-color); display:flex; flex-wrap:wrap; font-size:.72rem; gap:8px 14px; margin-top:11px; }
         .note { color:var(--secondary-text-color); font-size:.78rem; line-height:1.45; margin:14px 2px 0; }
         .calculation pre { background:var(--secondary-background-color); border-radius:12px; font-size:.68rem; max-height:260px; overflow:auto; padding:10px; white-space:pre-wrap; }
+        .ytd { background:linear-gradient(145deg,color-mix(in srgb,var(--luma-purple) 22%,var(--card-background-color)),color-mix(in srgb,var(--luma-green) 12%,var(--card-background-color))); border:1px solid color-mix(in srgb,var(--luma-purple) 38%,var(--divider-color)); border-radius:22px; margin-top:18px; overflow:hidden; padding:18px; position:relative; }
+        .ytd::after { background:radial-gradient(circle,color-mix(in srgb,var(--luma-purple) 24%,transparent),transparent 68%); content:""; height:180px; pointer-events:none; position:absolute; right:-55px; top:-85px; width:180px; }
+        .ytd-head { align-items:flex-start; display:flex; gap:12px; justify-content:space-between; position:relative; z-index:1; }
+        .ytd-kicker { color:var(--secondary-text-color); font-size:.7rem; font-weight:750; letter-spacing:.11em; text-transform:uppercase; }
+        .ytd-title { font-size:1.08rem; font-weight:700; margin-top:3px; }
+        .ytd-head ha-icon { --mdc-icon-size:25px; color:var(--luma-gold); }
+        .ytd-value { font-size:2.4rem; font-weight:750; letter-spacing:-.04em; line-height:1.05; margin-top:15px; position:relative; z-index:1; }
+        .ytd-caption { color:var(--secondary-text-color); font-size:.76rem; margin-top:4px; position:relative; z-index:1; }
+        .ytd-grid { display:grid; gap:8px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:16px; position:relative; z-index:1; }
+        .ytd-metric { background:color-mix(in srgb,var(--card-background-color) 70%,transparent); border:1px solid color-mix(in srgb,var(--divider-color) 70%,transparent); border-radius:13px; padding:10px; }
+        .ytd-metric-label { color:var(--secondary-text-color); font-size:.67rem; }
+        .ytd-metric-value { font-size:.92rem; font-weight:700; margin-top:3px; }
         .message { color:var(--secondary-text-color); margin:8px 0 2px; }
         .error { color:var(--error-color); }
         @media (min-width:700px) {
@@ -183,13 +195,20 @@ class LumaEnergyCard extends HTMLElement {
       try {
         const message = {type:"luma_energy/period_summary", basis};
         if (start && end) { message.start = start; message.end = end; }
-        const result = await this._hass.callWS(message);
-        if (revision === this._revision) this._renderResult(result);
+        const now = new Date();
+        const ytdStart = `${now.getFullYear()}-01-01`;
+        const ytdEnd = this._shiftDate(this._formatDate(now), 1);
+        const ytdMessage = {type:"luma_energy/period_summary", start:ytdStart, end:ytdEnd, basis:"bill_issue"};
+        const [result, ytd] = await Promise.all([
+          this._hass.callWS(message),
+          this._hass.callWS(ytdMessage).catch((error) => ({error: error.message, start:ytdStart})),
+        ]);
+        if (revision === this._revision) this._renderResult(result, ytd);
       } catch (error) { if (revision === this._revision) this._renderMessage(`Unable to load LUMA data: ${error.message}`, true); }
     }, 150);
   }
 
-  _renderResult(data) {
+  _renderResult(data, ytd) {
     const money = (cents) => cents == null ? "—" : new Intl.NumberFormat(undefined, {style:"currency", currency:"USD"}).format(cents / 100);
     const t = data.totals || {};
     const energy = data.energy || {};
@@ -385,6 +404,65 @@ class LumaEnergyCard extends HTMLElement {
     pre.textContent = JSON.stringify({coverage:data.coverage,bills:data.bills,revision:data.revision}, null, 2);
     details.append(summary, pre);
     body.append(details);
+    this._renderYearToDate(body, ytd, money);
+  }
+  _renderYearToDate(body, data, money) {
+    const totals = data?.totals || {};
+    const bills = Array.isArray(data?.bills) ? data.bills : [];
+    const savings = totals.utility_bill_reduction_cents ?? (
+      totals.without_solar_cents != null && totals.actual_cents != null
+        ? Number(totals.without_solar_cents) - Number(totals.actual_cents)
+        : null
+    );
+    const latestEnd = bills.reduce((latest, bill) => !latest || bill.end > latest ? bill.end : latest, null);
+    const year = data?.start?.slice(0, 4) || String(new Date().getFullYear());
+    const section = document.createElement("section");
+    section.className = "ytd";
+    const head = document.createElement("div");
+    head.className = "ytd-head";
+    const identity = document.createElement("div");
+    const kicker = document.createElement("div");
+    kicker.className = "ytd-kicker";
+    kicker.textContent = `${year} year to date`;
+    const title = document.createElement("div");
+    title.className = "ytd-title";
+    title.textContent = "Total solar savings";
+    identity.append(kicker, title);
+    const icon = document.createElement("ha-icon");
+    icon.setAttribute("icon", "mdi:calendar-star");
+    head.append(identity, icon);
+    const value = document.createElement("div");
+    value.className = "ytd-value";
+    value.textContent = money(savings);
+    const caption = document.createElement("div");
+    caption.className = "ytd-caption";
+    caption.textContent = data?.error
+      ? "Year-to-date total is temporarily unavailable."
+      : bills.length
+        ? `${bills.length} completed bill${bills.length === 1 ? "" : "s"}${latestEnd ? ` • through ${latestEnd}` : ""}`
+        : "No completed bills are available for this year yet.";
+    section.append(head, value, caption);
+    const grid = document.createElement("div");
+    grid.className = "ytd-grid";
+    for (const [label, amount] of [
+      ["Actual bills", totals.actual_cents],
+      ["Without solar", totals.without_solar_cents],
+      ["Loan payments", totals.loan_cents],
+      ["Savings after loan", totals.solar_savings_cents],
+    ]) {
+      const metric = document.createElement("div");
+      metric.className = "ytd-metric";
+      const metricLabel = document.createElement("div");
+      metricLabel.className = "ytd-metric-label";
+      metricLabel.textContent = label;
+      const metricValue = document.createElement("div");
+      metricValue.className = "ytd-metric-value";
+      metricValue.textContent = money(amount);
+      metric.append(metricLabel, metricValue);
+      grid.append(metric);
+    }
+    section.append(grid);
+    body.append(section);
   }
   _renderMessage(message, error = false) {
     const body = this.shadowRoot?.getElementById("body");
