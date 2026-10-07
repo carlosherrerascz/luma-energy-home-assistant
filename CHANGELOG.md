@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.4...v1.2.5) (2026-10-07)
+
+
+### Bug Fixes
+
+* keep energy report synced after card reorder ([f815721](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/f815721e8553b0c4a1fee2d7f69621f1ffdfcac4))
+
 ## [1.2.4](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.3...v1.2.4) (2026-10-05)
 
 
