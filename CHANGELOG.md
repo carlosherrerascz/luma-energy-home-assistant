@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.5...v1.3.0) (2026-10-07)
+
+
+### Features
+
+* redesign the energy report card ([c70551a](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/c70551ad2432b32f52bcef28988ef12ef0fd1bb7))
+
 ## [1.2.5](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.2.4...v1.2.5) (2026-10-07)
 
 
