@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.4.0...v1.4.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* distinguish billing coverage from calendar energy ([18f157e](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/18f157e265c74171887b6148dddec1209d4d350b))
+
 # [1.4.0](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.3.0...v1.4.0) (2026-10-07)
 
 
