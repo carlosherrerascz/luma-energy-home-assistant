@@ -27,9 +27,16 @@ data. It accepts
 `period_start`, `period_end`, and `basis` overrides. When the host dashboard
 contains the standard Energy period selector, it follows that selection
 automatically. Set `collection_key` when using a custom Energy data collection.
-For `basis: bill_issue`, the selected period controls which bills appear in the
-comparison table and the card labels the result accordingly. Energy totals and
-coverage always describe the selected dates.
+For `basis: bill_issue`, only bills **issued** within the selected dates contribute
+to financial totals. Their full billing dates appear in the report; imports and
+bill data coverage use those billing dates. Calendar energy coverage is labeled
+separately. Loan obligations are counted once per selected month, independently of
+bill count. A missing selected bill month leaves complete financial totals
+unavailable. Savings are estimates based on inverter consumption and each bill's
+rates; bill-specific warnings appear with the comparison.
+
+For `basis: calendar`, energy metrics describe the selected calendar dates.
+Overlapping bills appear as references, without calendar financial totals.
 The older custom event is also supported:
 
 ```js

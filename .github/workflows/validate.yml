@@ -26,3 +26,5 @@ jobs:
           PY
       - name: Validate card syntax
         run: node --check luma-energy-card.js
+      - name: Test report rendering and date selection
+        run: node --test tests/*.test.cjs
