@@ -216,20 +216,30 @@ class LumaEnergyCard extends HTMLElement {
     const kwh = (value) => value == null ? "—" : `${Number(value).toLocaleString(undefined, {maximumFractionDigits: 2})} kWh`;
     const inclusiveEnd = data.end ? this._shiftDate(data.end, -1) : null;
     const periodLabel = data.start && inclusiveEnd ? `${data.start} → ${inclusiveEnd}` : "Selected period unavailable";
-    const basisLabel = data.basis === "calendar" ? "calendar energy" : "bills covering selected period";
+    const calendar = data.basis === "calendar";
+    const basisLabel = calendar ? "calendar energy" : "bills issued in selected period";
+    const billCoverage = comparisons.reduce((total, bill) => ({
+      days: total.days + Number(bill.energy?.days || 0),
+      present: total.present + Number(bill.energy?.present_days || 0),
+    }), {days:0, present:0});
     const sumImports = (source) => comparisons.length ? comparisons.reduce((sum, bill) => sum + Number(bill.differences?.import?.[source] || 0), 0) : null;
     const savings = t.utility_bill_reduction_cents ?? (
       t.without_solar_cents != null && t.actual_cents != null
         ? Number(t.without_solar_cents) - Number(t.actual_cents)
         : null
     );
-    const metrics = [
+    const metrics = calendar ? [
+      {label:"Calendar load", value:kwh(energy.totals_kwh?.load), icon:"mdi:home-lightning-bolt-outline", tone:"gold"},
+      {label:"Calendar solar", value:kwh(energy.totals_kwh?.pv), icon:"mdi:solar-power", tone:"green"},
+      {label:"Calendar EG4 imports", value:kwh(energy.totals_kwh?.import), icon:"mdi:transmission-tower-import", tone:"purple"},
+      {label:"Calendar data coverage", value:energy.days == null ? "—" : `${energy.present_days || 0}/${energy.days} days`, icon:"mdi:calendar-check-outline", tone:"blue"},
+    ] : [
       {label:"Actual bill", value:money(t.actual_cents), icon:"mdi:receipt-text-outline", tone:"purple"},
-      {label:"Without solar", value:money(t.without_solar_cents), icon:"mdi:transmission-tower-import", tone:"gold"},
-      {label:"Loan payment", value:money(t.loan_cents), icon:"mdi:bank-outline", tone:"blue"},
-      {label:"LUMA imports", value:kwh(sumImports("luma_kwh")), icon:"mdi:meter-electric-outline", tone:"purple"},
-      {label:"EG4 imports", value:kwh(sumImports("eg4_kwh")), icon:"mdi:solar-power", tone:"green"},
-      {label:"Data coverage", value:energy.days == null ? "—" : `${energy.present_days || 0}/${energy.days} days`, icon:"mdi:calendar-check-outline", tone:"blue"},
+      {label:"Estimated without solar", value:money(t.without_solar_cents), icon:"mdi:transmission-tower-import", tone:"gold"},
+      {label:"Monthly loan obligations", value:money(t.loan_cents), icon:"mdi:bank-outline", tone:"blue"},
+      {label:"LUMA imports (bills)", value:kwh(sumImports("luma_kwh")), icon:"mdi:meter-electric-outline", tone:"purple"},
+      {label:"EG4 imports (bills)", value:kwh(sumImports("eg4_kwh")), icon:"mdi:solar-power", tone:"green"},
+      {label:"Bill data coverage", value:billCoverage.days ? `${billCoverage.present}/${billCoverage.days} ${comparisons.length > 1 ? "bill-days" : "days"}` : "—", icon:"mdi:calendar-check-outline", tone:"blue"},
     ];
     const body = this.shadowRoot?.getElementById("body");
     if (!body) return;
@@ -237,7 +247,11 @@ class LumaEnergyCard extends HTMLElement {
     body.replaceChildren();
     const period = document.createElement("div");
     period.className = "period";
-    for (const text of [periodLabel, basisLabel]) {
+    const periodLabels = [periodLabel, basisLabel];
+    if (!calendar && comparisons.length === 1) {
+      periodLabels.push(`Billing dates: ${comparisons[0].start} → ${comparisons[0].end}`);
+    }
+    for (const text of periodLabels) {
       const pill = document.createElement("span");
       pill.className = "pill";
       pill.textContent = text;
@@ -251,7 +265,7 @@ class LumaEnergyCard extends HTMLElement {
     heroLabel.className = "hero-label";
     heroLabel.textContent = savings == null
       ? "Solar savings"
-      : Number(savings) >= 0 ? "Saved with solar" : "Solar impact";
+      : Number(savings) >= 0 ? "Estimated utility savings" : "Estimated solar impact";
     const heroValue = document.createElement("div");
     heroValue.className = "hero-value";
     heroValue.textContent = money(savings);
@@ -259,9 +273,9 @@ class LumaEnergyCard extends HTMLElement {
     heroSub.className = "hero-sub";
     heroSub.textContent = t.solar_savings_cents == null
       ? "Loan-adjusted savings unavailable"
-      : `${money(t.solar_savings_cents)} after the solar loan`;
+      : `${money(t.solar_savings_cents)} estimated after the solar loan`;
     hero.append(heroLabel, heroValue, heroSub);
-    body.append(hero);
+    if (!calendar) body.append(hero);
 
     const grid = document.createElement("section");
     grid.className = "metrics";
@@ -284,12 +298,12 @@ class LumaEnergyCard extends HTMLElement {
     }
     body.append(grid);
 
-    if (comparisons.length > 1) {
+    if (!calendar && comparisons.length > 1) {
       const section = document.createElement("section");
       section.className = "section";
       const heading = document.createElement("h3");
       heading.className = "section-title";
-      heading.textContent = "Savings over time";
+      heading.textContent = "Estimated savings by bill";
       section.append(heading);
       const trend = document.createElement("div");
       trend.className = "trend";
@@ -330,7 +344,7 @@ class LumaEnergyCard extends HTMLElement {
       history.className = "bill-history";
       history.open = comparisons.length <= 2;
       const historySummary = document.createElement("summary");
-      historySummary.textContent = `Bill history (${comparisons.length})`;
+      historySummary.textContent = `${calendar ? "Overlapping bill references" : "Bills issued in selection"} (${comparisons.length})`;
       history.append(historySummary);
       const bills = document.createElement("div");
       bills.className = "bill-list";
@@ -362,9 +376,9 @@ class LumaEnergyCard extends HTMLElement {
         );
         for (const [label, value] of [
           ["Actual", money(bill.actual_cents)],
-          ["Without solar", money(bill.without_solar_cents)],
-          ["Solar saved", money(billSavings)],
-          ["After loan", money(bill.solar_savings_cents)],
+          ["Estimated without solar", money(bill.without_solar_cents)],
+          ["Estimated utility savings", money(billSavings)],
+          ["Estimated after loan", money(bill.solar_savings_cents)],
         ]) {
           const item = document.createElement("div");
           const itemLabel = document.createElement("div");
@@ -385,6 +399,12 @@ class LumaEnergyCard extends HTMLElement {
         eg4Import.textContent = `EG4 ${kwh(bill.differences?.import?.eg4_kwh)}`;
         imports.append(lumaImport, eg4Import);
         billCard.append(imports);
+        if (bill.warnings?.length) {
+          const warnings = document.createElement("p");
+          warnings.className = "note";
+          warnings.textContent = bill.warnings.join(" ");
+          billCard.append(warnings);
+        }
         bills.append(billCard);
       }
       history.append(bills);
@@ -392,9 +412,14 @@ class LumaEnergyCard extends HTMLElement {
     }
     const note = document.createElement("p");
     note.className = "note";
-    const missingDays = Object.values(data.energy?.missing_days || {}).reduce((max, value) => Math.max(max, Number(value) || 0), 0);
-    note.textContent = data.billing_note || (comparisons.length ? "" : "No LUMA bills cover this selection; energy totals are shown for the selected period.");
-    if (missingDays) note.textContent += `${note.textContent ? " " : ""}Energy coverage is incomplete: ${missingDays} day${missingDays === 1 ? "" : "s"} are missing.`;
+    note.textContent = data.billing_note || (comparisons.length ? "" : "No LUMA bills were issued during the selected dates.");
+    if (!calendar && energy.days != null) {
+      note.textContent += ` Calendar energy for selected dates: ${energy.present_days || 0}/${energy.days} days recorded; separate from bill coverage.`;
+    }
+    if (data.coverage?.missing_bill_months?.length) {
+      note.textContent += ` No selected bills for: ${data.coverage.missing_bill_months.join(", ")}. Complete period savings are unavailable.`;
+    }
+    if (!calendar && comparisons.length) note.textContent += " Savings use inverter consumption and each bill's rates; they are estimates.";
     if (note.textContent) body.append(note);
     const details = document.createElement("details");
     details.className = "calculation";
@@ -404,7 +429,7 @@ class LumaEnergyCard extends HTMLElement {
     pre.textContent = JSON.stringify({coverage:data.coverage,bills:data.bills,revision:data.revision}, null, 2);
     details.append(summary, pre);
     body.append(details);
-    this._renderYearToDate(body, ytd, money);
+    if (!calendar) this._renderYearToDate(body, ytd, money);
   }
   _renderYearToDate(body, data, money) {
     const totals = data?.totals || {};
@@ -426,7 +451,7 @@ class LumaEnergyCard extends HTMLElement {
     kicker.textContent = `${year} year to date`;
     const title = document.createElement("div");
     title.className = "ytd-title";
-    title.textContent = "Total solar savings";
+    title.textContent = "Estimated utility savings";
     identity.append(kicker, title);
     const icon = document.createElement("ha-icon");
     icon.setAttribute("icon", "mdi:calendar-star");
@@ -439,16 +464,16 @@ class LumaEnergyCard extends HTMLElement {
     caption.textContent = data?.error
       ? "Year-to-date total is temporarily unavailable."
       : bills.length
-        ? `${bills.length} completed bill${bills.length === 1 ? "" : "s"}${latestEnd ? ` • through ${latestEnd}` : ""}`
+        ? `${bills.length} bill${bills.length === 1 ? "" : "s"} issued this year${latestEnd ? ` • billing dates through ${latestEnd}` : ""}${data.coverage?.missing_bill_months?.length ? ` • missing selected bills: ${data.coverage.missing_bill_months.join(", ")}` : ""}`
         : "No completed bills are available for this year yet.";
     section.append(head, value, caption);
     const grid = document.createElement("div");
     grid.className = "ytd-grid";
     for (const [label, amount] of [
       ["Actual bills", totals.actual_cents],
-      ["Without solar", totals.without_solar_cents],
+      ["Estimated without solar", totals.without_solar_cents],
       ["Loan payments", totals.loan_cents],
-      ["Savings after loan", totals.solar_savings_cents],
+      ["Estimated after loan", totals.solar_savings_cents],
     ]) {
       const metric = document.createElement("div");
       metric.className = "ytd-metric";

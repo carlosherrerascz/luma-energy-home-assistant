@@ -1,7 +1,7 @@
 {
   "name": "luma-energy-home-assistant",
   "private": true,
-  "scripts": {"release": "semantic-release"},
+  "scripts": {"release": "semantic-release", "test": "node --test tests/*.test.cjs"},
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
