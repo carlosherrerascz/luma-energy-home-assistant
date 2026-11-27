@@ -18,7 +18,7 @@ class LumaEnergyCard extends HTMLElement {
           --luma-blue: #5aa9ff;
         }
         ha-card { overflow: hidden; }
-        .card { padding: 18px; }
+        .card { container-type:inline-size; padding: 18px; }
         .title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
         .eyebrow { color:var(--secondary-text-color); font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
         h2 { font-size:1.45rem; margin:3px 0 0; }
@@ -31,7 +31,7 @@ class LumaEnergyCard extends HTMLElement {
         .hero.negative { background:linear-gradient(135deg,#8f3041,#e45d70); }
         .hero.neutral { background:linear-gradient(135deg,#405066,#6f8098); }
         .hero-label { font-size:.82rem; font-weight:650; opacity:.84; }
-        .hero-value { font-size:clamp(2.1rem,10vw,3.5rem); font-weight:750; letter-spacing:-.045em; line-height:1.04; margin:5px 0; }
+        .hero-value { font-size:clamp(2.1rem,10cqi,3.5rem); font-weight:750; letter-spacing:-.045em; line-height:1.04; margin:5px 0; }
         .hero-sub { font-size:.82rem; opacity:.86; }
         .metrics { display:grid; gap:9px; grid-template-columns:repeat(2,minmax(0,1fr)); }
         .metric { background:var(--secondary-background-color); border:1px solid color-mix(in srgb,var(--divider-color) 76%,transparent); border-radius:16px; min-width:0; padding:12px; }
@@ -41,7 +41,7 @@ class LumaEnergyCard extends HTMLElement {
         .metric[data-tone="purple"] .metric-head ha-icon { color:var(--luma-purple); }
         .metric[data-tone="gold"] .metric-head ha-icon { color:var(--luma-gold); }
         .metric[data-tone="blue"] .metric-head ha-icon { color:var(--luma-blue); }
-        .metric-value { font-size:1.12rem; font-weight:700; margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .metric-value { font-size:clamp(1rem,5.2cqi,1.12rem); font-weight:700; margin-top:6px; overflow-wrap:anywhere; }
         .section { margin-top:18px; }
         .section-title { align-items:center; display:flex; font-size:1rem; justify-content:space-between; margin:0 0 10px; }
         .trend { display:grid; gap:10px; }
@@ -79,7 +79,8 @@ class LumaEnergyCard extends HTMLElement {
         .ytd-metric-value { font-size:.92rem; font-weight:700; margin-top:3px; }
         .message { color:var(--secondary-text-color); margin:8px 0 2px; }
         .error { color:var(--error-color); }
-        @media (min-width:700px) {
+        /* Size to the card, not the screen: a sidebar or split screen can narrow it. */
+        @container (min-width:480px) {
           .metrics { grid-template-columns:repeat(3,minmax(0,1fr)); }
           .bill-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
         }
