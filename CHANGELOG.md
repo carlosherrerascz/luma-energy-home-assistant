@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.4.1...v1.4.2) (2026-11-27)
+
+
+### Bug Fixes
+
+* size report tiles to the card's width, not the screen's ([#2](https://github.com/carlosherrerascz/luma-energy-home-assistant/issues/2)) ([0b45a03](https://github.com/carlosherrerascz/luma-energy-home-assistant/commit/0b45a035aaf0a219aaf7ea1c80b8eca3074c14b6))
+
 ## [1.4.1](https://github.com/carlosherrerascz/luma-energy-home-assistant/compare/v1.4.0...v1.4.1) (2026-10-24)
 
 
